@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Test de placement — Computer Science Club</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+body{background:radial-gradient(ellipse at top,#1e1b4b 0%,#0b1020 55%,#05070f 100%);min-height:100vh}
+.card{background:rgba(15,23,42,.75);border:1px solid rgba(148,163,184,.15);backdrop-filter:blur(8px)}
+.opt{transition:.15s}.opt:hover{border-color:#818cf8;background:rgba(99,102,241,.1)}
+.opt.sel{border-color:#818cf8;background:rgba(99,102,241,.25)}
+input{background:#0f172a;border:1px solid #334155;color:#e2e8f0}
+input:focus{outline:2px solid #6366f1;border-color:transparent}
+</style>
+</head>
+<body class="text-slate-200 font-sans p-4 md:p-8">
+<script>
+// ====== CONFIG ======
+const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwJx7A91WWcSTbCz4wq5qkbsXEVNwOvPibPNEPbVC1RPXFjSDbCNehSOD43NCW5jhVMXA/exec";
+const PASS_MARK = 4; // minimum correct answers (out of 6) in a level to validate it
+// ====================
+</script>
+<div id="app" class="max-w-2xl mx-auto"></div>
+
+<script>
+const LEVELS = {
+  1: { name: "Niveau 1", axes: ["Algorithmique de base", "Algorithmique avancée", "Web : HTML & CSS"] },
+  2: { name: "Niveau 2", axes: ["Comprendre l'IA & préparer les données", "Machine Learning appliqué & IA moderne", "Web : HTML, CSS & JavaScript"] },
+  3: { name: "Niveau 3", axes: ["AI, Machine Learning & Deep Learning", "Fullstack Development", "Infrastructure & Qualité"] }
+};
+// [level, axis, question, [options], correctIndex]
+const Q = [
+ [1,0,"Que vaut s à la fin ? s=0 ; pour i de 1 à 4 : s = s + i",["6","10","15","4"],1],
+ [1,0,"Quelle structure répète des instructions tant qu'une condition est vraie ?",["if / sinon","switch","while (tant que)","return"],2],
+ [1,1,"Quelle est la complexité d'une recherche dichotomique dans un tableau trié ?",["O(n)","O(log n)","O(n²)","O(1)"],1],
+ [1,1,"Quelle structure de données suit le principe LIFO ?",["File (queue)","Pile (stack)","Tableau trié","Graphe"],1],
+ [1,2,"Quelle balise HTML crée un lien hypertexte ?",["<link>","<href>","<a>","<url>"],2],
+ [1,2,"Quelle propriété CSS définit l'espace extérieur autour d'un élément ?",["padding","border","margin","spacing-in"],2],
+ [2,0,"Que fait l'imputation lors de la préparation des données ?",["Supprime les colonnes","Remplace les valeurs manquantes","Entraîne le modèle","Normalise les images"],1],
+ [2,0,"Pourquoi sépare-t-on les données en jeux d'entraînement et de test ?",["Accélérer le calcul","Évaluer la capacité de généralisation","Doubler les données","Supprimer le bruit"],1],
+ [2,1,"Lequel est un algorithme supervisé de classification ?",["K-means","PCA","Régression logistique","DBSCAN"],2],
+ [2,1,"Que signifie le sur-apprentissage (overfitting) ?",["Bon sur l'entraînement, mauvais sur de nouvelles données","Mauvais partout","Modèle trop simple","Pas assez de features"],0],
+ [2,2,"Quel mot-clé JavaScript déclare une variable non réaffectable ?",["var","let","const","static"],2],
+ [2,2,"Que retourne [1,2,3].map(x => x * 2) ?",["[1,2,3]","6","[2,4,6]","undefined"],2],
+ [3,0,"À quoi sert la rétropropagation dans un réseau de neurones ?",["Charger les données","Calculer les gradients pour mettre à jour les poids","Choisir le nombre de couches","Augmenter les données"],1],
+ [3,0,"Quelle architecture repose sur le mécanisme d'attention ?",["Transformer","Perceptron simple","K-NN","Arbre de décision"],0],
+ [3,1,"Quel code HTTP indique qu'une ressource a été créée ?",["200","201","204","301"],1],
+ [3,1,"Quel est le rôle d'un ORM ?",["Chiffrer les mots de passe","Mapper des objets du code vers des tables relationnelles","Compresser le JavaScript","Gérer le DNS"],1],
+ [3,2,"Quel est l'intérêt principal de Docker ?",["Écrire du CSS plus vite","Isoler une application et ses dépendances dans un conteneur","Remplacer Git","Entraîner des modèles"],1],
+ [3,2,"Que fait un pipeline CI ?",["Déploie sans test","Exécute automatiquement build et tests à chaque push","Sauvegarde la base","Minifie les images"],1]
+];
+// shuffle options once per session, keep track of correct text
+const shuffle = a => { a = a.slice(); for (let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];} return a; };
+const QS = Q.map(([lvl,axis,q,opts,c]) => ({lvl,axis,q,correct:opts[c],opts:shuffle(opts)}));
+const state = { step:0, i:0, profile:{}, answers:Array(QS.length).fill(null), result:null, sent:null };
+const $ = document.getElementById("app");
+const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+function header(){return `<div class="text-center mb-6"><p class="text-indigo-400 text-sm tracking-widest uppercase">Computer Science Club</p>
+<h1 class="text-3xl md:text-4xl font-bold bg-gradient-to-r from-indigo-400 to-cyan-300 bg-clip-text text-transparent">Test de placement</h1></div>`;}
+
+function render(){
+  if(state.step===0) return renderProfile();
+  if(state.step===1) return renderQuiz();
+  return renderResult();
+}
+
+function renderProfile(){
+  const p = state.profile;
+  const f = (id,label,type,ph) => `<label class="block mb-4"><span class="text-sm text-slate-400">${label}</span>
+  <input id="${id}" type="${type}" placeholder="${ph}" value="${esc(p[id]||"")}" class="w-full mt-1 rounded-lg px-4 py-3"></label>`;
+  $.innerHTML = header()+`<div class="card rounded-2xl p-6 md:p-8"><h2 class="text-xl font-semibold mb-1">Votre profil</h2>
+  <p class="text-slate-400 text-sm mb-6">18 questions · environ 10 minutes · sans aide extérieure</p>
+  ${f("name","Nom & Prénom","text","Ex : Amina El Idrissi")}${f("email","Adresse e-mail","email","vous@exemple.com")}
+  ${f("phone","Téléphone / WhatsApp","tel","+212 6 00 00 00 00")}${f("study","Année d'étude / Filière","text","Ex : 2ème année — Génie Informatique")}
+  <p id="err" class="text-rose-400 text-sm mb-3 hidden"></p>
+  <button id="go" class="w-full py-3 rounded-lg font-semibold bg-gradient-to-r from-indigo-500 to-cyan-500 hover:opacity-90">Commencer le test →</button></div>`;
+  document.getElementById("go").onclick = () => {
+    const v = id => document.getElementById(id).value.trim();
+    state.profile = {name:v("name"),email:v("email"),phone:v("phone"),study:v("study")};
+    const e = document.getElementById("err");
+    let msg = "";
+    if(Object.values(state.profile).some(x=>!x)) msg = "Veuillez remplir tous les champs.";
+    else if(!/^\S+@\S+\.\S+$/.test(state.profile.email)) msg = "Adresse e-mail invalide.";
+    if(msg){e.textContent=msg;e.classList.remove("hidden");return;}
+    state.step=1; render();
+  };
+}
+
+function renderQuiz(){
+  const q = QS[state.i], n = QS.length, sel = state.answers[state.i];
+  const pct = Math.round(state.i/n*100);
+  $.innerHTML = header()+`<div class="card rounded-2xl p-6 md:p-8">
+  <div class="flex justify-between text-xs text-slate-400 mb-2"><span>Question ${state.i+1} / ${n}</span><span>${LEVELS[q.lvl].name} · ${esc(LEVELS[q.lvl].axes[q.axis])}</span></div>
+  <div class="h-2 bg-slate-800 rounded-full mb-6 overflow-hidden"><div class="h-full bg-gradient-to-r from-indigo-500 to-cyan-400 transition-all" style="width:${pct}%"></div></div>
+  <h2 class="text-lg md:text-xl font-semibold mb-5">${esc(q.q)}</h2>
+  <div class="space-y-3 mb-6">${q.opts.map((o,k)=>`<button data-k="${k}" class="opt w-full text-left px-4 py-3 rounded-lg border border-slate-700 ${sel===o?"sel":""}">${esc(o)}</button>`).join("")}</div>
+  <div class="flex justify-between"><button id="prev" class="px-4 py-2 rounded-lg text-slate-400 hover:text-white ${state.i===0?"invisible":""}">← Précédent</button>
+  <button id="next" class="px-6 py-2 rounded-lg font-semibold bg-indigo-500 hover:bg-indigo-400 disabled:opacity-40" ${sel?"":"disabled"}>${state.i===n-1?"Terminer":"Suivant →"}</button></div></div>`;
+  $.querySelectorAll(".opt").forEach(b=>b.onclick=()=>{state.answers[state.i]=q.opts[b.dataset.k];renderQuiz();});
+  document.getElementById("prev").onclick=()=>{state.i--;renderQuiz();};
+  document.getElementById("next").onclick=()=>{ if(state.i<n-1){state.i++;renderQuiz();} else finish(); };
+}
+
+function compute(){
+  const by = {1:[0,0,0],2:[0,0,0],3:[0,0,0]};
+  QS.forEach((q,i)=>{ if(state.answers[i]===q.correct) by[q.lvl][q.axis]++; });
+  const lv = {1:0,2:0,3:0}; for(const l in by) lv[l]=by[l].reduce((a,b)=>a+b,0);
+  // Placement: start at the first level NOT yet mastered (>= PASS_MARK / 6)
+  const level = lv[1]<PASS_MARK ? 1 : (lv[2]<PASS_MARK ? 2 : 3);
+  return {by,lv,total:lv[1]+lv[2]+lv[3],level};
+}
+
+async function finish(){
+  state.result = compute(); state.step=2; state.sent="pending"; render();
+  const r = state.result;
+  const payload = {
+    timestamp:new Date().toISOString(), name:state.profile.name, email:state.profile.email,
+    phone:state.profile.phone, study:state.profile.study,
+    answers:QS.map((q,i)=>({q:q.q,selected:state.answers[i],correct:q.correct,ok:state.answers[i]===q.correct})),
+    score:r.total, outOf:QS.length, scoreL1:r.lv[1], scoreL2:r.lv[2], scoreL3:r.lv[3], assignedLevel:"Niveau "+r.level
+  };
+  if(GOOGLE_SCRIPT_URL.startsWith("PASTE_")){ state.sent="skipped"; console.warn("GOOGLE_SCRIPT_URL not set; payload:",payload); return render(); }
+  try{
+    // text/plain avoids the CORS preflight that Apps Script cannot answer; no-cors = opaque response
+    await fetch(GOOGLE_SCRIPT_URL,{method:"POST",mode:"no-cors",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify(payload)});
+    state.sent="ok";
+  }catch(e){ console.error(e); state.sent="error"; }
+  render();
+}
+
+function renderResult(){
+  const r = state.result, L = LEVELS[r.level];
+  const next = {1:"Vous débuterez par les fondamentaux : algorithmique et bases du Web (HTML & CSS).",
+    2:"Vous rejoignez le parcours IA & données et JavaScript.",
+    3:"Vous rejoignez le parcours avancé : Deep Learning, Fullstack, Infrastructure & Qualité."}[r.level];
+  const status = {pending:"Envoi des résultats…",ok:"✔ Résultats transmis au club.",error:"⚠ Envoi impossible — prévenez un organisateur.",skipped:"⚠ Envoi désactivé (URL Google Script non configurée)."}[state.sent];
+  const bars = [1,2,3].map(l=>{const p=Math.round(r.lv[l]/6*100);return `<div class="mb-4"><div class="flex justify-between text-sm mb-1"><span>${LEVELS[l].name}</span><span>${r.lv[l]} / 6 ${r.lv[l]>=PASS_MARK?"✔":""}</span></div>
+  <div class="h-2.5 bg-slate-800 rounded-full overflow-hidden"><div class="h-full bg-gradient-to-r from-indigo-500 to-cyan-400" style="width:${p}%"></div></div>
+  <ul class="text-xs text-slate-500 mt-1">${LEVELS[l].axes.map((a,k)=>`<li>${esc(a)} : ${r.by[l][k]}/2</li>`).join("")}</ul></div>`}).join("");
+  $.innerHTML = header()+`<div class="card rounded-2xl p-6 md:p-8 text-center">
+  <p class="text-slate-400 text-sm">${esc(state.profile.name)}, votre placement est</p>
+  <div class="text-5xl font-extrabold my-3 bg-gradient-to-r from-indigo-400 to-cyan-300 bg-clip-text text-transparent">${L.name}</div>
+  <p class="text-slate-300 mb-1">Score total : <b>${r.total} / ${QS.length}</b></p><p class="text-slate-400 text-sm mb-6">${next}</p>
+  <div class="text-left border-t border-slate-700 pt-5">${bars}</div>
+  <p class="text-xs text-slate-500 mt-2">Règle : un niveau est maîtrisé avec au moins ${PASS_MARK}/6. Placement dans le premier niveau non maîtrisé : Niveau 1 si N1 &lt; ${PASS_MARK}, Niveau 2 si N1 maîtrisé et N2 &lt; ${PASS_MARK}, sinon Niveau 3.</p>
+  <p class="text-sm mt-5 ${state.sent==="ok"?"text-emerald-400":state.sent==="pending"?"text-slate-400":"text-amber-400"}">${status}</p></div>`;
+}
+render();
+</script>
+</body>
+</html>
