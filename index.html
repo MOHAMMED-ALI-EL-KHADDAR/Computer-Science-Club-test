@@ -31,24 +31,28 @@ const LEVELS = {
 };
 // [level, axis, question, [options], correctIndex]
 const Q = [
- [1,0,"Que vaut s à la fin ? s=0 ; pour i de 1 à 4 : s = s + i",["6","10","15","4"],1],
- [1,0,"Quelle structure répète des instructions tant qu'une condition est vraie ?",["if / sinon","switch","while (tant que)","return"],2],
- [1,1,"Quelle est la complexité d'une recherche dichotomique dans un tableau trié ?",["O(n)","O(log n)","O(n²)","O(1)"],1],
- [1,1,"Quelle structure de données suit le principe LIFO ?",["File (queue)","Pile (stack)","Tableau trié","Graphe"],1],
- [1,2,"Quelle balise HTML crée un lien hypertexte ?",["<link>","<href>","<a>","<url>"],2],
+ [1,0,"Que vaut s à la fin du programme ? s = 18 ; s = s + 2",["16","20","18","36"],1],
+ [1,0,"En programmation, laquelle de ces instructions représente correctement une variable contenant la valeur 20 ?",["age = 20","age == 20","20 = age","age : 20"],0],
+ [1,1,"On possède le tableau notes = [12, 15, 8, 17]. Quelle est la valeur de notes[2] ?",["12","15","8","17"],2],
+ [1,1,"Quelle est la complexité d'un algorithme qui parcourt chaque élément d'un tableau une seule fois ?",["O(1)","O(log n)","O(n)","O(n²)"],2],
+ [1,2,"À quoi sert principalement le langage HTML dans une page web ?",["À définir la structure et le contenu de la page","À ajouter des animations complexes","À gérer une base de données","À héberger le site"],0],
  [1,2,"Quelle propriété CSS définit l'espace extérieur autour d'un élément ?",["padding","border","margin","spacing-in"],2],
- [2,0,"Que fait l'imputation lors de la préparation des données ?",["Supprime les colonnes","Remplace les valeurs manquantes","Entraîne le modèle","Normalise les images"],1],
- [2,0,"Pourquoi sépare-t-on les données en jeux d'entraînement et de test ?",["Accélérer le calcul","Évaluer la capacité de généralisation","Doubler les données","Supprimer le bruit"],1],
- [2,1,"Lequel est un algorithme supervisé de classification ?",["K-means","PCA","Régression logistique","DBSCAN"],2],
- [2,1,"Que signifie le sur-apprentissage (overfitting) ?",["Bon sur l'entraînement, mauvais sur de nouvelles données","Mauvais partout","Modèle trop simple","Pas assez de features"],0],
- [2,2,"Quel mot-clé JavaScript déclare une variable non réaffectable ?",["var","let","const","static"],2],
- [2,2,"Que retourne [1,2,3].map(x => x * 2) ?",["[1,2,3]","6","[2,4,6]","undefined"],2],
- [3,0,"À quoi sert la rétropropagation dans un réseau de neurones ?",["Charger les données","Calculer les gradients pour mettre à jour les poids","Choisir le nombre de couches","Augmenter les données"],1],
- [3,0,"Quelle architecture repose sur le mécanisme d'attention ?",["Transformer","Perceptron simple","K-NN","Arbre de décision"],0],
- [3,1,"Quel code HTTP indique qu'une ressource a été créée ?",["200","201","204","301"],1],
- [3,1,"Quel est le rôle d'un ORM ?",["Chiffrer les mots de passe","Mapper des objets du code vers des tables relationnelles","Compresser le JavaScript","Gérer le DNS"],1],
- [3,2,"Quel est l'intérêt principal de Docker ?",["Écrire du CSS plus vite","Isoler une application et ses dépendances dans un conteneur","Remplacer Git","Entraîner des modèles"],1],
- [3,2,"Que fait un pipeline CI ?",["Déploie sans test","Exécute automatiquement build et tests à chaque push","Sauvegarde la base","Minifie les images"],1]
+
+
+ [2,0,"Une calculatrice classique est-elle considérée comme une intelligence artificielle ?",["Oui","Non"],1],
+ [2,1,"Le machine learning fait partie de l’intelligence artificielle ?",["Oui","Non"],1],
+ [2,1,"Lequel est un algorithme supervisé de classification ?",["Régression linéaire","Régression logistique","Clustering","Tri à bulles"],2],
+ [2,2,"Quelle propriété CSS permet de changer la couleur du texte ?",["color","background-color","font-size","text-style"],0],
+ [2,2,"Quel mot-clé JavaScript déclare une variable qui ne peut pas être réaffectée ?",["var","let","const","static"],2],
+ [2,2,"Si une variable est de type string, que contient-elle généralement ?",["Un nombre","Un texte","Une valeur vraie ou fausse","Une liste"],1],
+
+
+ [3,0,"Le Machine Learning est principalement basé sur :",["Des exemples et des données","Des câbles réseau","Des fichiers HTML","Des commandes Git"],0],
+ [3,0,"Que signifie le sur-apprentissage (overfitting) ?",["Bon sur l'entraînement, mauvais sur de nouvelles données","Mauvais partout","Modèle trop simple","Pas assez de features"],0],
+ [3,1,"Que retourne [1, 2, 3].map(x => x * 2) ?",["[1, 2, 3]","6","[2, 4, 6]","undefined"],2],
+ [3,1,"Quel code HTTP indique généralement qu'une ressource a été créée avec succès ?",["200","201","204","301"],1],
+ [3,2,"Quelle commande Git permet de voir quels fichiers ont été modifiés ?",["git status","git clone","git push","git init"],0],
+ [3,2,"Quel est l'intérêt principal de Docker ?",["Écrire du CSS plus rapidement","Isoler une application et ses dépendances dans un conteneur","Remplacer Git","Entraîner des modèles d'IA"],1],
 ];
 // shuffle options once per session, keep track of correct text
 const shuffle = a => { a = a.slice(); for (let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];} return a; };
@@ -72,7 +76,7 @@ function renderProfile(){
   <input id="${id}" type="${type}" placeholder="${ph}" value="${esc(p[id]||"")}" class="w-full mt-1 rounded-lg px-4 py-3"></label>`;
   $.innerHTML = header()+`<div class="card rounded-2xl p-6 md:p-8"><h2 class="text-xl font-semibold mb-1">Votre profil</h2>
   <p class="text-slate-400 text-sm mb-6">18 questions · environ 10 minutes · sans aide extérieure</p>
-  ${f("name","Nom & Prénom","text","Ex : Amina El Idrissi")}${f("email","Adresse e-mail","email","vous@exemple.com")}
+  ${f("name","Nom & Prénom","text","Ex : Aya El Jebari")}${f("email","Adresse e-mail","email","vous@exemple.com")}
   ${f("phone","Téléphone / WhatsApp","tel","+212 6 00 00 00 00")}${f("study","Année d'étude / Filière","text","Ex : 2ème année — Génie Informatique")}
   <p id="err" class="text-rose-400 text-sm mb-3 hidden"></p>
   <button id="go" class="w-full py-3 rounded-lg font-semibold bg-gradient-to-r from-indigo-500 to-cyan-500 hover:opacity-90">Commencer le test →</button></div>`;
